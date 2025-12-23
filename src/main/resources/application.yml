@@ -1,0 +1,97 @@
+spring:
+  application:
+    name: dmr
+  banner:
+    location: classpath:bmr.banner
+  ai:
+    openai:
+      base-url: ${VLLM_BASE_URL}
+      api-key: ${VLLM_API_KEY:EMPTY}
+      timeout:
+        connect: ${VLLM_CONNECT_TIMEOUT:10}
+        read: ${VLLM_READ_TIMEOUT:300}
+      chat:
+        options:
+          model: ${VLLM_MODEL:openai/gpt-oss-20b}
+          temperature: 0.3
+          max-tokens: 4000
+          top-p: 0.95
+
+gitlab:
+  url: ${GITLAB_URL}
+  token: ${GITLAB_TOKEN}
+  webhook:
+    secret-token: ${GITLAB_WEBHOOK_SECRET}
+  api:
+    timeout: 30s
+    max-retries: 3
+    retry-delay: 1s
+
+google:
+  chat:
+    webhook-url: ${GOOGLE_CHAT_WEBHOOK_URL}
+    enabled: ${GOOGLE_CHAT_ENABLED:true}
+    timeout: 10s
+
+code-review:
+  max-files: 100
+  max-file-size: 1048576  # 1MB in bytes
+  line-by-line-enabled: true
+  chunking:
+    enabled: true
+    files-per-chunk: 5  # 청크당 파일 수
+    strategy: file  # file (파일 단위) 또는 line (라인 수 단위)
+  ai:
+    temperature: 0.3
+    max-tokens: 12000
+    top-p: 0.95
+  excluded-extensions:
+    - .gitattributes
+    - .gitignore
+    - .mod
+    - .env.example
+    - .bat
+    - .md
+  excluded-paths:
+    - gradle/
+    - build/
+    - .kotlin/
+    - .gradle/
+    - .idea/
+    - .claude/
+  analysis:
+    side-effects:
+      severity-threshold: medium
+      patterns:
+        database:
+          - "INSERT INTO"
+          - "UPDATE "
+          - "DELETE FROM"
+          - "ALTER TABLE"
+          - "DROP TABLE"
+          - "TRUNCATE"
+        api:
+          - "RestTemplate"
+          - "WebClient"
+          - "HttpClient"
+          - "@FeignClient"
+        file-io:
+          - "FileWriter"
+          - "FileOutputStream"
+          - "Files.write"
+          - "Files.delete"
+        state:
+          - "static "
+          - "companion object"
+          - "object "
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+logging:
+  level:
+    root: INFO
+    at.tori.dmr: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
