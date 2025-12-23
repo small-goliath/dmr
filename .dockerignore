@@ -1,0 +1,86 @@
+# ============================================
+# DMR Docker Ignore Configuration
+# Only build/libs/*.jar is needed in Docker
+# ============================================
+
+# Version Control
+.git/
+.gitignore
+.gitattributes
+
+# Source Code (already compiled to JAR)
+src/
+
+# Build System
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+build.gradle.kts
+settings.gradle.kts
+
+# Build Outputs (except application JAR)
+build/classes/
+build/generated/
+build/reports/
+build/test-results/
+build/tmp/
+build/resources/
+build/kotlin/
+target/
+out/
+*.class
+*.war
+
+# Allow application JAR (required for Docker)
+!build/libs/*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# Environment & Secrets
+.env
+.env.*
+*.env
+application-local.yml
+application-dev.yml
+*.key
+*.pem
+
+# Logs
+*.log
+logs/
+
+# Test
+test-output/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# Documentation
+*.md
+docs/
+DOCKER_QUICKSTART.md
+
+# Docker (no need to copy these into image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Kotlin
+.kotlin/
+
+# Temporary
+*.tmp
+*.bak
+*.cache

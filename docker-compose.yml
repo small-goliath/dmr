@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  dmr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dmr-code-review
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      # Server
+      - SERVER_PORT=8080
+
+      # vLLM / OpenAI-compatible API
+      - VLLM_BASE_URL=${VLLM_BASE_URL:-http://host.docker.internal:8000/v1}
+      - VLLM_API_KEY=${VLLM_API_KEY:-EMPTY}
+      - VLLM_MODEL=${VLLM_MODEL:-openai/gpt-oss-20b}
+      - VLLM_CONNECT_TIMEOUT=${VLLM_CONNECT_TIMEOUT:-10}
+      - VLLM_READ_TIMEOUT=${VLLM_READ_TIMEOUT:-300}
+
+      # GitLab
+      - GITLAB_URL=${GITLAB_URL}
+      - GITLAB_TOKEN=${GITLAB_TOKEN}
+      - GITLAB_WEBHOOK_SECRET=${GITLAB_WEBHOOK_SECRET}
+
+      # Google Chat
+      - GOOGLE_CHAT_WEBHOOK_URL=${GOOGLE_CHAT_WEBHOOK_URL}
+      - GOOGLE_CHAT_ENABLED=${GOOGLE_CHAT_ENABLED:-true}
+
+      # Logging (Optional)
+      - LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT:-INFO}
+      - LOGGING_LEVEL_DMR=${LOGGING_LEVEL_DMR:-INFO}
+
+      # JVM Options
+      - JAVA_OPTS=-Xms512m -Xmx1024m
+
+    env_file:
+      - .env
+
+    volumes:
+      # Optional: Mount logs directory
+      - ./logs:/app/logs
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    networks:
+      - dmr-network
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+networks:
+  dmr-network:
+    driver: bridge
+
+volumes:
+  dmr-logs:
+    driver: local

@@ -167,6 +167,70 @@ GOOGLE_CHAT_ENABLED=true
 java -jar build/libs/dmr-0.0.1-SNAPSHOT.jar
 ```
 
+## Docker로 실행
+
+Docker를 사용하면 환경 구성 없이 빠르게 실행할 수 있습니다.
+
+### 사전 요구사항
+- Docker 20.x 이상
+- Docker Compose v2.x 이상
+
+### 1. 환경 변수 설정
+
+```bash
+cp .env.example .env
+# .env 파일을 편집하여 실제 값을 설정
+```
+
+### 2. Docker 이미지 빌드
+
+```bash
+docker-compose build
+
+# 또는 Docker 직접 사용
+docker build -t dmr-code-review:latest .
+```
+
+### 3. 컨테이너 실행
+
+```bash
+# 백그라운드 실행
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f dmr
+```
+
+### 트러블슈팅
+
+#### 빌드 실패
+
+```bash
+# 캐시 없이 재빌드
+docker-compose build --no-cache
+```
+
+#### 컨테이너가 시작되지 않을 때
+
+```bash
+# 로그 확인
+docker-compose logs dmr
+
+# 상세 정보 확인
+docker inspect dmr-code-review
+```
+
+#### 외부 API 연결 실패
+
+Docker 컨테이너에서 호스트 머신의 서비스에 접근할 때:
+- Linux: `172.17.0.1` 사용
+- macOS/Windows: `host.docker.internal` 사용
+
+```bash
+# .env 파일에서
+VLLM_BASE_URL=http://host.docker.internal:8000/v1
+```
+
 ## 설정 가이드
 
 ### application.yml 주요 설정
