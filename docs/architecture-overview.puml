@@ -1,0 +1,94 @@
+@startuml DMR Architecture Overview
+!theme plain
+skinparam defaultTextAlignment center
+
+title DMR System - High Level Architecture Overview
+
+' Define colors
+skinparam rectangle {
+  BackgroundColor<<external>> LightBlue
+  BackgroundColor<<dmr>> LightGreen
+  BackgroundColor<<ai>> LightYellow
+  BorderColor Black
+  FontSize 12
+}
+
+' External Systems
+rectangle "GitLab" <<external>> as gitlab {
+  rectangle "Webhook\nTrigger" as webhook
+  rectangle "REST API\n(MR Data)" as gitlab_api
+}
+
+' DMR Core System
+rectangle "DMR Application" <<dmr>> as dmr {
+  rectangle "Webhook Handler" as handler
+  rectangle "Review Orchestrator" as orchestrator
+
+  together {
+    rectangle "Line-by-Line\nReview\n(≤20 files)" as line_review
+    rectangle "Chunked Review\n(>20 files)\n5 files/chunk" as chunk_review
+  }
+
+  rectangle "Dependency\nAnalyzer" as dep_analyzer {
+    rectangle "Forward\nDependencies" as forward
+    rectangle "Backward\nDependencies" as backward
+  }
+
+  rectangle "Impact\nAnalyzer" as impact_analyzer {
+    rectangle "CRITICAL" as critical
+    rectangle "HIGH" as high
+    rectangle "MEDIUM" as medium
+    rectangle "LOW" as low
+  }
+
+  rectangle "Context\nBuilder" as context
+}
+
+' AI Service
+rectangle "AI Service" <<ai>> as ai {
+  rectangle "Claude\nSonnet 4.5\n(Anthropic)" as claude
+}
+
+' Notification
+rectangle "Notification" <<external>> as notification {
+  rectangle "Google Chat" as gchat
+}
+
+' Data Flow - Inbound
+webhook -down-> handler : "MR 이벤트 훅"
+handler -down-> orchestrator
+
+' Strategy Selection
+orchestrator -down-> line_review
+orchestrator -down-> chunk_review
+
+' Analysis Flow
+line_review -down-> dep_analyzer : "분석"
+chunk_review -down-> dep_analyzer : "분석"
+dep_analyzer -right-> impact_analyzer : "영향도 분석"
+dep_analyzer -down-> context : "Build"
+
+' AI Review
+context -down-> claude : "리뷰 요청"
+claude -up-> orchestrator : "리뷰 커맨트"
+
+' Outbound
+orchestrator -right-> gitlab_api : "리뷰 커맨트 작성"
+orchestrator -down-> gchat : "알림"
+
+note bottom of dep_analyzer
+  **지원되는 언어**
+  • Kotlin
+  • Java
+  • Python (Planned)
+end note
+
+note bottom of impact_analyzer
+  **영향도 레벨 설정**
+  CRITICAL: Breaking Changes 포함
+  HIGH: 10개 이상의 의존성
+  MEDIUM: 5-10개의 의존성
+  LOW: 5개 미만의 의존성
+end note
+
+@enduml

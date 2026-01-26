@@ -16,6 +16,16 @@ spring:
           temperature: 0.3
           max-tokens: 4000
           top-p: 0.95
+    anthropic:
+      api-key: ${CLAUDE_API_KEY:}
+      timeout:
+        connect: ${CLAUDE_CONNECT_TIMEOUT:10}
+        read: ${CLAUDE_READ_TIMEOUT:300}
+      chat:
+        options:
+          model: ${CLAUDE_MODEL:claude-sonnet-4-5-20250929}
+          temperature: 0.3
+          max-tokens: 4000
 
 gitlab:
   url: ${GITLAB_URL}
@@ -42,8 +52,9 @@ code-review:
     files-per-chunk: 5  # 청크당 파일 수
     strategy: file  # file (파일 단위) 또는 line (라인 수 단위)
   ai:
+    provider: ${AI_PROVIDER:anthropic}  # openai (VLLM 포함) 또는 anthropic (Claude)
     temperature: 0.3
-    max-tokens: 12000
+    max-tokens: 8192
     top-p: 0.95
   excluded-extensions:
     - .gitattributes

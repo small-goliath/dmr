@@ -10,7 +10,7 @@ private val logger = KotlinLogging.logger {}
 
 data class Symbol(
   val name: String,
-  val type: at.tori.dmr.analyzer.SymbolType,
+  val type: SymbolType,
   val filePath: String,
   val isPublic: Boolean = true
 )
@@ -26,8 +26,8 @@ enum class SymbolType {
 }
 
 data class DependencyInfo(
-  val symbol: at.tori.dmr.analyzer.Symbol,
-  val usages: List<at.tori.dmr.domain.SearchResult>,
+  val symbol: Symbol,
+  val usages: List<SearchResult>,
   val affectedFiles: Set<String>
 ) {
   val usageCount: Int get() = usages.size
@@ -37,13 +37,13 @@ data class DependencyInfo(
 // 변경된 파일이 사용하는 외부 심볼
 data class UsedDependencyInfo(
   val sourceFile: String,  // 변경된 파일 경로
-  val usedSymbols: List<at.tori.dmr.analyzer.UsedSymbol>,  // 사용하는 외부 심볼들
+  val usedSymbols: List<UsedSymbol>,  // 사용하는 외부 심볼들
   val externalFiles: Set<String>  // 의존하는 외부 파일들
 )
 
 data class UsedSymbol(
   val name: String,
-  val type: at.tori.dmr.analyzer.UsedSymbolType,
+  val type: UsedSymbolType,
   val definitionFile: String?,  // 정의된 파일 (찾을 수 있는 경우)
   val lineNumber: Int  // 변경된 파일에서 사용된 라인 번호
 )
@@ -57,7 +57,7 @@ enum class UsedSymbolType {
 
 @Service
 class DependencyAnalyzer(
-  private val gitLabApiClient: at.tori.dmr.client.GitLabApiClient
+  private val gitLabApiClient: GitLabApiClient
 ) {
 
   /**
@@ -70,12 +70,12 @@ class DependencyAnalyzer(
    */
   suspend fun analyze(
     projectId: Long,
-    changedFiles: List<at.tori.dmr.domain.FileChange>,
+    changedFiles: List<FileChange>,
     targetBranch: String
-  ): List<at.tori.dmr.analyzer.DependencyInfo> {
-    _root_ide_package_.at.tori.dmr.analyzer.logger.info { "의존성 분석 중: ${changedFiles.size}개 파일" }
+  ): List<DependencyInfo> {
+    logger.info { "의존성 분석 중: ${changedFiles.size}개 파일" }
 
-    val allSymbols = mutableListOf<at.tori.dmr.analyzer.Symbol>()
+    val allSymbols = mutableListOf<Symbol>()
 
     // 각 변경된 파일에서 심볼 추출
     for (file in changedFiles) {
@@ -83,13 +83,13 @@ class DependencyAnalyzer(
 
       val symbols = extractSymbolsFromDiff(file)
       allSymbols.addAll(symbols)
-      _root_ide_package_.at.tori.dmr.analyzer.logger.debug { "심볼 추출 완료: ${file.filePath}에서 ${symbols.size}개" }
+      logger.debug { "심볼 추출 완료: ${file.filePath}에서 ${symbols.size}개" }
     }
 
-    _root_ide_package_.at.tori.dmr.analyzer.logger.info { "분석할 심볼 발견: 총 ${allSymbols.size}개" }
+    logger.info { "분석할 심볼 발견: 총 ${allSymbols.size}개" }
 
     // 각 심볼의 사용하는 부분 검색
-    val dependencyInfoList = mutableListOf<at.tori.dmr.analyzer.DependencyInfo>()
+    val dependencyInfoList = mutableListOf<DependencyInfo>()
 
     for (symbol in allSymbols) {
       try {
@@ -106,35 +106,35 @@ class DependencyAnalyzer(
           val affectedFiles = externalUsages.map { it.path }.toSet()
 
           dependencyInfoList.add(
-            _root_ide_package_.at.tori.dmr.analyzer.DependencyInfo(
+            DependencyInfo(
               symbol = symbol,
               usages = externalUsages,
               affectedFiles = affectedFiles
             )
           )
 
-          _root_ide_package_.at.tori.dmr.analyzer.logger.debug {
+          logger.debug {
             "${symbol.type} '${symbol.name}'이(가) ${affectedFiles.size}개의 다른 파일에서 사용 중"
           }
         }
       } catch (e: Exception) {
-        _root_ide_package_.at.tori.dmr.analyzer.logger.warn { "심볼 '${symbol.name}' 검색 실패: ${e.message}" }
+        logger.warn { "심볼 '${symbol.name}' 검색 실패: ${e.message}" }
       }
     }
 
-    _root_ide_package_.at.tori.dmr.analyzer.logger.info { "의존성 발견: ${dependencyInfoList.size}개 심볼" }
+    logger.info { "의존성 발견: ${dependencyInfoList.size}개 심볼" }
     return dependencyInfoList
   }
 
   // 변경된 파일이 사용하는 외부 심볼 추출
   suspend fun analyzeUsedDependencies(
     projectId: Long,
-    changedFiles: List<at.tori.dmr.domain.FileChange>,
+    changedFiles: List<FileChange>,
     targetBranch: String
-  ): List<at.tori.dmr.analyzer.UsedDependencyInfo> {
-    _root_ide_package_.at.tori.dmr.analyzer.logger.info { "역방향 의존성 분석 중: ${changedFiles.size}개 파일" }
+  ): List<UsedDependencyInfo> {
+    logger.info { "역방향 의존성 분석 중: ${changedFiles.size}개 파일" }
 
-    val usedDependencies = mutableListOf<at.tori.dmr.analyzer.UsedDependencyInfo>()
+    val usedDependencies = mutableListOf<UsedDependencyInfo>()
 
     for (file in changedFiles) {
       if (file.deletedFile) continue

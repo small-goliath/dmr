@@ -16,14 +16,14 @@ enum class ImpactLevel {
 data class CrossFileImpact(
   val changedFile: String,
   val affectedFiles: Set<String>,
-  val dependencies: List<at.tori.dmr.analyzer.DependencyInfo>,
-  val impactLevel: at.tori.dmr.analyzer.ImpactLevel,
+  val dependencies: List<DependencyInfo>,
+  val impactLevel: ImpactLevel,
   val breakingChanges: List<String>,
   val description: String
 )
 
 data class CrossFileAnalysisResult(
-  val impacts: List<at.tori.dmr.analyzer.CrossFileImpact>,
+  val impacts: List<CrossFileImpact>,
   val totalAffectedFiles: Set<String>,
   val hasCriticalImpact: Boolean,
   val hasBreakingChanges: Boolean,
@@ -41,12 +41,12 @@ class CrossFileImpactAnalyzer {
    * @return 파일 간 분석 결과
    */
   fun analyze(
-    changedFiles: List<at.tori.dmr.domain.FileChange>,
-    dependencies: List<at.tori.dmr.analyzer.DependencyInfo>
-  ): at.tori.dmr.analyzer.CrossFileAnalysisResult {
-    _root_ide_package_.at.tori.dmr.analyzer.logger.info { "파일 간 영향도 분석 중: ${changedFiles.size}개 파일" }
+    changedFiles: List<FileChange>,
+    dependencies: List<DependencyInfo>
+  ): CrossFileAnalysisResult {
+    logger.info { "파일 간 영향도 분석 중: ${changedFiles.size}개 파일" }
 
-    val impacts = mutableListOf<at.tori.dmr.analyzer.CrossFileImpact>()
+    val impacts = mutableListOf<CrossFileImpact>()
     val allAffectedFiles = mutableSetOf<String>()
 
     // 파일별로 의존성 그룹핑
@@ -59,11 +59,11 @@ class CrossFileImpactAnalyzer {
         if (fileDeps.isNotEmpty()) {
           val affectedFiles = fileDeps.flatMap { it.affectedFiles }.toSet()
           impacts.add(
-            _root_ide_package_.at.tori.dmr.analyzer.CrossFileImpact(
+            CrossFileImpact(
               changedFile = file.filePath,
               affectedFiles = affectedFiles,
               dependencies = fileDeps,
-              impactLevel = _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.CRITICAL,
+              impactLevel = ImpactLevel.CRITICAL,
               breakingChanges = listOf("File deleted with ${fileDeps.size} dependent symbols"),
               description = "파일이 삭제되었으나 ${affectedFiles.size}개의 다른 파일에서 사용 중입니다."
             )
@@ -77,11 +77,11 @@ class CrossFileImpactAnalyzer {
 
       if (fileDeps.isEmpty()) {
         impacts.add(
-          _root_ide_package_.at.tori.dmr.analyzer.CrossFileImpact(
+          CrossFileImpact(
             changedFile = file.filePath,
             affectedFiles = emptySet(),
             dependencies = emptyList(),
-            impactLevel = _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.LOW,
+            impactLevel = ImpactLevel.LOW,
             breakingChanges = emptyList(),
             description = "다른 파일에 영향을 주지 않는 독립적인 변경입니다."
           )
@@ -103,7 +103,7 @@ class CrossFileImpactAnalyzer {
       for (dep in fileDeps) {
         if (dep.hasExternalUsages && dep.symbol.isPublic) {
           val changeType = analyzeChangeType(file.diff, dep.symbol.name)
-          if (changeType == _root_ide_package_.at.tori.dmr.analyzer.ChangeType.SIGNATURE_MODIFIED || changeType == _root_ide_package_.at.tori.dmr.analyzer.ChangeType.DELETED) {
+          if (changeType == ChangeType.SIGNATURE_MODIFIED || changeType == ChangeType.DELETED) {
             breakingChanges.add(
               "${dep.symbol.type} '${dep.symbol.name}' ${changeType.description}"
             )
@@ -119,7 +119,7 @@ class CrossFileImpactAnalyzer {
       )
 
       impacts.add(
-        _root_ide_package_.at.tori.dmr.analyzer.CrossFileImpact(
+        CrossFileImpact(
           changedFile = file.filePath,
           affectedFiles = affectedFiles,
           dependencies = fileDeps,
@@ -132,14 +132,14 @@ class CrossFileImpactAnalyzer {
       allAffectedFiles.addAll(affectedFiles)
     }
 
-    val hasCritical = impacts.any { it.impactLevel == _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.CRITICAL }
+    val hasCritical = impacts.any { it.impactLevel == ImpactLevel.CRITICAL }
     val hasBreaking = impacts.any { it.breakingChanges.isNotEmpty() }
 
     val summary = buildSummary(impacts, allAffectedFiles.size)
 
-    _root_ide_package_.at.tori.dmr.analyzer.logger.info { "파일 간 영향도 분석 완료: ${impacts.size}개 영향, ${allAffectedFiles.size}개 파일 영향받음" }
+    logger.info { "파일 간 영향도 분석 완료: ${impacts.size}개 영향, ${allAffectedFiles.size}개 파일 영향받음" }
 
-    return _root_ide_package_.at.tori.dmr.analyzer.CrossFileAnalysisResult(
+    return CrossFileAnalysisResult(
       impacts = impacts,
       totalAffectedFiles = allAffectedFiles,
       hasCriticalImpact = hasCritical,
@@ -152,16 +152,16 @@ class CrossFileImpactAnalyzer {
     affectedFileCount: Int,
     usageCount: Int,
     hasPublicSymbols: Boolean
-  ): at.tori.dmr.analyzer.ImpactLevel {
+  ): ImpactLevel {
     return when {
-      affectedFileCount >= 10 || usageCount >= 20 -> _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.CRITICAL
-      affectedFileCount >= 5 || (usageCount >= 10 && hasPublicSymbols) -> _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.HIGH
-      affectedFileCount >= 2 || usageCount >= 5 -> _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.MEDIUM
-      else -> _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.LOW
+      affectedFileCount >= 10 || usageCount >= 20 -> ImpactLevel.CRITICAL
+      affectedFileCount >= 5 || (usageCount >= 10 && hasPublicSymbols) -> ImpactLevel.HIGH
+      affectedFileCount >= 2 || usageCount >= 5 -> ImpactLevel.MEDIUM
+      else -> ImpactLevel.LOW
     }
   }
 
-  private fun analyzeChangeType(diff: String, symbolName: String): at.tori.dmr.analyzer.ChangeType {
+  private fun analyzeChangeType(diff: String, symbolName: String): ChangeType {
     val lines = diff.lines()
 
     var hasAddition = false
@@ -177,10 +177,10 @@ class CrossFileImpactAnalyzer {
     }
 
     return when {
-      hasDeletion && !hasAddition -> _root_ide_package_.at.tori.dmr.analyzer.ChangeType.DELETED
-      hasDeletion && hasAddition -> _root_ide_package_.at.tori.dmr.analyzer.ChangeType.SIGNATURE_MODIFIED
-      hasAddition && !hasDeletion -> _root_ide_package_.at.tori.dmr.analyzer.ChangeType.ADDED
-      else -> _root_ide_package_.at.tori.dmr.analyzer.ChangeType.UNCHANGED
+      hasDeletion && !hasAddition -> ChangeType.DELETED
+      hasDeletion && hasAddition -> ChangeType.SIGNATURE_MODIFIED
+      hasAddition && !hasDeletion -> ChangeType.ADDED
+      else -> ChangeType.UNCHANGED
     }
   }
 
@@ -209,9 +209,9 @@ class CrossFileImpactAnalyzer {
     }.trim()
   }
 
-  private fun buildSummary(impacts: List<at.tori.dmr.analyzer.CrossFileImpact>, totalAffectedFiles: Int): String {
-    val criticalCount = impacts.count { it.impactLevel == _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.CRITICAL }
-    val highCount = impacts.count { it.impactLevel == _root_ide_package_.at.tori.dmr.analyzer.ImpactLevel.HIGH }
+  private fun buildSummary(impacts: List<CrossFileImpact>, totalAffectedFiles: Int): String {
+    val criticalCount = impacts.count { it.impactLevel == ImpactLevel.CRITICAL }
+    val highCount = impacts.count { it.impactLevel == ImpactLevel.HIGH }
     val breakingChanges = impacts.flatMap { it.breakingChanges }
 
     return buildString {

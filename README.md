@@ -33,7 +33,8 @@ AI 기반 자동 코드 리뷰 시스템으로, GitLab Merge Request에 대해 �
 - **Spring WebFlux**
 
 ### AI
-- OpenAI 호환 API (vLLM, Ollama 등)
+- **OpenAI 호환 API**: vLLM, OpenAI, Ollama 등
+- **Anthropic Claude**: Claude 3.5 Sonnet, Claude 3 Opus 등
 - DeepSeek-V3, GPT 시리즈 등 다양한 모델 지원
 
 ### Testing
@@ -139,10 +140,17 @@ cp .env.example .env
 # Server
 SERVER_PORT=8080
 
-# vLLM / OpenAI-compatible API
+# AI Provider (openai 또는 anthropic)
+AI_PROVIDER=openai
+
+# vLLM / OpenAI-compatible API (AI_PROVIDER=openai일 때)
 VLLM_BASE_URL=http://localhost:8000/v1
 VLLM_API_KEY=EMPTY
 VLLM_MODEL=openai/gpt-oss-20b
+
+# Anthropic Claude API (AI_PROVIDER=anthropic일 때)
+CLAUDE_API_KEY=sk-ant-YOUR_CLAUDE_API_KEY_HERE
+CLAUDE_MODEL=claude-sonnet-4-5-20250929
 
 # GitLab
 GITLAB_URL=https://gitlab.example.com
@@ -264,9 +272,17 @@ code-review:
     - .git/
 ```
 
-#### AI 모델 설정
+#### AI Provider 설정
+
+DMR은 두 가지 AI Provider를 지원합니다:
+
+**1. OpenAI 호환 API (vLLM, OpenAI, Ollama 등)**
 
 ```yaml
+code-review:
+  ai:
+    provider: openai  # 기본값
+
 spring:
   ai:
     openai:

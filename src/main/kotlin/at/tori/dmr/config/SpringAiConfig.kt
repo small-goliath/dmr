@@ -3,14 +3,18 @@ package at.tori.dmr.config
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
+import org.springframework.ai.anthropic.AnthropicChatOptions
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.openai.api.OpenAiApi
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient
@@ -56,35 +60,47 @@ class SpringAiConfig {
   }
 
   @Bean
-  fun chatClient(chatModel: ChatModel, defaultChatOptions: OpenAiChatOptions): ChatClient {
-    return ChatClient.builder(chatModel)
-      .defaultOptions(defaultChatOptions)
-      .build()
+  @Primary
+  @ConditionalOnProperty(name = ["code-review.ai.provider"], havingValue = "anthropic", matchIfMissing = true)
+  fun primaryAnthropicChatModel(@Qualifier("anthropicChatModel") chatModel: ChatModel): ChatModel {
+    return chatModel
   }
 
   @Bean
-  fun defaultChatOptions(
-    @Value("\${spring.ai.openai.chat.options.temperature:0.3}") temperature: Double,
-    @Value("\${spring.ai.openai.chat.options.max-tokens:4000}") maxTokens: Int,
-    @Value("\${spring.ai.openai.chat.options.top-p:0.95}") topP: Double
-  ): OpenAiChatOptions {
-    return OpenAiChatOptions.builder()
-      .temperature(temperature)
-      .maxTokens(maxTokens)
-      .topP(topP)
-      .build()
+  @Primary
+  @ConditionalOnProperty(name = ["code-review.ai.provider"], havingValue = "openai")
+  fun primaryOpenAiChatModel(@Qualifier("openAiChatModel") chatModel: ChatModel): ChatModel {
+    return chatModel
   }
 
   @Bean
-  fun lineReviewChatOptions(
+  fun chatClient(chatModel: ChatModel): ChatClient {
+    return ChatClient.builder(chatModel).build()
+  }
+
+  @Bean("lineReviewChatOptions")
+  @ConditionalOnProperty(name = ["code-review.ai.provider"], havingValue = "openai", matchIfMissing = false)
+  fun lineReviewOpenAiChatOptions(
     @Value("\${code-review.ai.temperature:0.3}") temperature: Double,
-    @Value("\${code-review.ai.max-tokens:12000}") maxTokens: Int,
+    @Value("\${code-review.ai.max-tokens:8192}") maxTokens: Int,
     @Value("\${code-review.ai.top-p:0.95}") topP: Double
   ): OpenAiChatOptions {
     return OpenAiChatOptions.builder()
       .temperature(temperature)
       .maxTokens(maxTokens)
       .topP(topP)
+      .build()
+  }
+
+  @Bean("lineReviewChatOptions")
+  @ConditionalOnProperty(name = ["code-review.ai.provider"], havingValue = "anthropic", matchIfMissing = true)
+  fun lineReviewAnthropicChatOptions(
+    @Value("\${code-review.ai.temperature:0.3}") temperature: Double,
+    @Value("\${code-review.ai.max-tokens:8192}") maxTokens: Int
+  ): AnthropicChatOptions {
+    return AnthropicChatOptions.builder()
+      .temperature(temperature)
+      .maxTokens(maxTokens)
       .build()
   }
 }

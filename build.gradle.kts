@@ -28,6 +28,8 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-validation")
   implementation("org.springframework.boot:spring-boot-starter-actuator")
   implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter")
+  implementation("org.springframework.ai:spring-ai-anthropic-spring-boot-starter")
+  implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
   implementation("org.jetbrains.kotlin:kotlin-reflect")
   implementation("org.jetbrains.kotlin:kotlin-stdlib")

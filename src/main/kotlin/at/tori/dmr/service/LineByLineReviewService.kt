@@ -16,7 +16,7 @@ import at.tori.dmr.prompt.PromptTemplateService
 import kotlinx.coroutines.coroutineScope
 import mu.KotlinLogging
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.openai.OpenAiChatOptions
+import org.springframework.ai.chat.prompt.ChatOptions
 import org.springframework.stereotype.Service
 
 private val logger = KotlinLogging.logger {}
@@ -27,7 +27,7 @@ class LineByLineReviewService(
   private val dependencyAnalyzer: DependencyAnalyzer,
   private val crossFileImpactAnalyzer: CrossFileImpactAnalyzer,
   private val chatClient: ChatClient,
-  private val lineReviewChatOptions: OpenAiChatOptions,
+  private val lineReviewChatOptions: ChatOptions,
   private val promptTemplateService: PromptTemplateService,
   private val jsonResponseParser: JsonResponseParser,
   private val chunkedReviewService: ChunkedReviewService
